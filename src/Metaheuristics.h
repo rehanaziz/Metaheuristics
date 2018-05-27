@@ -16,6 +16,9 @@
 #include <unordered_set>
 #include <vector>
 #include <math.h>
+#include <algorithm>
+#include <numeric>
+
 using namespace std;
 
 class Problem;
@@ -23,12 +26,14 @@ class Problem;
 class Solution
 {
 public:
-	Problem* problem;
 	double cost;
 	bool complete;
 
-	Solution(Problem*);
-	void print();
+	Solution();
+	virtual void print() {}
+	//XXX: Change to copy-constructor
+	Solution* copy();
+	virtual ~Solution() = default;
 };
 
 class ScoredEntity
@@ -49,15 +54,15 @@ class Generator : public ScoredEntity
 {
 public:
 	Generator() {}
-	void generate(Solution*);
-	~Generator() {}
+	virtual Solution* generate() { return 0; }
+	virtual ~Generator() = default;
 };
 class NeighbourExplorer : public ScoredEntity
 {
 public:
 	NeighbourExplorer() {}
-	void nextNeighbour(Solution* in, Solution* out);
-	~NeighbourExplorer() {}
+	virtual Solution* nextNeighbour(Solution* in) { cout << "BADDD\n"; return 0; }
+	virtual ~NeighbourExplorer() = default;
 };
 // Insertion/repair heuristics
 // Destroy heuristics
@@ -66,36 +71,49 @@ public:
 class SearchAlgorithm
 {
 public:
-	Solution* currentBestSolution;
+	Problem& problem;
+	Solution* bestSolution;
+	Solution* currSolution;
+	double costBestSolution;
 	vector<Solution*> solutions;
-	set<Generator> generators;
-	set<NeighbourExplorer> neighbourExplorers;
+	vector<Generator*> generators; //XXX: Convert this into a sorted set
+	vector<NeighbourExplorer*> neighbourExplorers; //XXX: Convert this into a sorted set
 	int iterations;
 	int restarts;
-	Problem& problem;
 
-	SearchAlgorithm(Problem& p) : problem(p) {}
-	Generator& nextGenerator();
-	NeighbourExplorer& nextNeighbour();
-	void run();
+	SearchAlgorithm(Problem& p) : problem(p), iterations(0), restarts(0) {}
+	Generator* nextGenerator();
+	NeighbourExplorer* nextNeighbourHeuristic();
+	virtual void run();
+	bool getNextIteration();
+	virtual ~SearchAlgorithm() = default;
 };
 
-class SimulatedAnnealing : SearchAlgorithm
+class Problem
+{
+public:
+	Problem() {}
+	virtual double evaluate(Solution*, double maxCost = 100000000.0) { cout << "BAD\n"; return 100000.0; }
+	virtual ~Problem() = default;
+};
+
+/*
+class SimulatedAnnealing : public SearchAlgorithm
 {
 public:
 	double temperature;
 
 	SimulatedAnnealing(Problem& p, Generator& g, NeighbourExplorer& e);
-	void run();
+	bool getNextIteration();
 };
+*/
 
-// XXX: Turn evaluate into a virtual function
-class Problem
+class HillClimbing : public SearchAlgorithm
 {
 public:
-	Problem() {}
-	double evaluate(Solution*) { return 0.0; }
-	~Problem() {}
+	HillClimbing(Problem& p, Generator* g, NeighbourExplorer* e);
+	~HillClimbing() {}
 };
+
 
 #endif /* METAHEURISTICS_H_ */
